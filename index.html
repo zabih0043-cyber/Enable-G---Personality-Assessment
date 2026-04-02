@@ -10,19 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
     <title>Enable G - Personality Assessment</title>
-    <script>
-      (function () {
-        const path = window.location.pathname.replace(/\\/g, "/");
-        const isDistPage = path.includes("/dist/");
-        const knownVitePorts = new Set(["5173", "4173"]);
-        const isViteServer = knownVitePorts.has(window.location.port);
-
-        if (!isDistPage && !isViteServer) {
-          const target = new URL("./dist/index.html#/", window.location.href);
-          window.location.replace(target.toString());
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
