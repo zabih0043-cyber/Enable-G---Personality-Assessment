@@ -1,6 +1,6 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useState } from "react";
 import WelcomeScreen from "../components/assessment/WelcomeScreen";
-import enableGLogo from "../assets/enableg-logo-transparent.png";
+import enableGLogo from "../assets/enableg-logo-cropped.png";
 
 const STORAGE_KEY = "enableg_assessment";
 const ProgressTracker = lazy(() => import("../components/assessment/ProgressTracker"));
