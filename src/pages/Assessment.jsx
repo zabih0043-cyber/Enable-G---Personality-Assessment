@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import ProgressTracker from "../components/assessment/ProgressTracker";
+import { lazy, startTransition, Suspense, useCallback, useEffect, useState } from "react";
 import WelcomeScreen from "../components/assessment/WelcomeScreen";
-import UserDetailsScreen from "../components/assessment/UserDetailsScreen";
-import SectionScreen from "../components/assessment/SectionScreen";
-import ReviewScreen from "../components/assessment/ReviewScreen";
-import ResultsScreen from "../components/assessment/ResultsScreen";
 import enableGLogo from "../assets/enableg-logo-transparent.png";
 
 const STORAGE_KEY = "enableg_assessment";
+const ProgressTracker = lazy(() => import("../components/assessment/ProgressTracker"));
+const UserDetailsScreen = lazy(() =>
+  import("../components/assessment/UserDetailsScreen")
+);
+const SectionScreen = lazy(() => import("../components/assessment/SectionScreen"));
+const ReviewScreen = lazy(() => import("../components/assessment/ReviewScreen"));
+const ResultsScreen = lazy(() => import("../components/assessment/ResultsScreen"));
 
 function loadState() {
   try {
@@ -23,16 +25,36 @@ function saveState(state) {
   } catch {}
 }
 
-export default function Assessment() {
+function getInitialState() {
   const saved = loadState();
-  const [step, setStep] = useState(saved?.step || 0);
-  const [answers, setAnswers] = useState(saved?.answers || {});
-  const [details, setDetails] = useState(
-    saved?.details || { date: new Date().toISOString().split("T")[0] }
+
+  return {
+    step: saved?.step || 0,
+    answers: saved?.answers || {},
+    details: saved?.details || { date: new Date().toISOString().split("T")[0] },
+  };
+}
+
+function ScreenLoader() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+    </div>
   );
+}
+
+export default function Assessment() {
+  const [initialState] = useState(getInitialState);
+  const [step, setStep] = useState(initialState.step);
+  const [answers, setAnswers] = useState(initialState.answers);
+  const [details, setDetails] = useState(initialState.details);
 
   useEffect(() => {
-    saveState({ step, answers, details });
+    const timeoutId = window.setTimeout(() => {
+      saveState({ step, answers, details });
+    }, 150);
+
+    return () => window.clearTimeout(timeoutId);
   }, [step, answers, details]);
 
   const handleAnswer = useCallback((questionId, value) => {
@@ -40,11 +62,15 @@ export default function Assessment() {
   }, []);
 
   const goToSection = (sectionIndex) => {
-    setStep(sectionIndex + 2);
+    startTransition(() => {
+      setStep(sectionIndex + 2);
+    });
   };
 
   const handleRestart = () => {
-    setStep(0);
+    startTransition(() => {
+      setStep(0);
+    });
     setAnswers({});
     setDetails({ date: new Date().toISOString().split("T")[0] });
     localStorage.removeItem(STORAGE_KEY);
@@ -62,43 +88,71 @@ export default function Assessment() {
                 className="h-11 sm:h-14 w-auto object-contain"
               />
             </div>
-            <ProgressTracker currentStep={step} />
+            <Suspense fallback={<ScreenLoader />}>
+              <ProgressTracker currentStep={step} />
+            </Suspense>
           </div>
         )}
 
         {step === 0 && <WelcomeScreen onStart={() => setStep(1)} />}
-        {step === 1 && (
-          <UserDetailsScreen
-            details={details}
-            onChange={setDetails}
-            onNext={() => setStep(2)}
-            onBack={() => setStep(0)}
-          />
-        )}
-        {step >= 2 && step <= 5 && (
-          <SectionScreen
-            sectionIndex={step - 2}
-            answers={answers}
-            onAnswer={handleAnswer}
-            onNext={() => setStep(step + 1)}
-            onBack={() => setStep(step - 1)}
-          />
-        )}
-        {step === 6 && (
-          <ReviewScreen
-            answers={answers}
-            onSubmit={() => setStep(7)}
-            onBack={() => setStep(5)}
-            onGoToSection={goToSection}
-          />
-        )}
-        {step === 7 && (
-          <ResultsScreen
-            answers={answers}
-            details={details}
-            onRestart={handleRestart}
-          />
-        )}
+        <Suspense fallback={<ScreenLoader />}>
+          {step === 1 && (
+            <UserDetailsScreen
+              details={details}
+              onChange={setDetails}
+              onNext={() => {
+                startTransition(() => {
+                  setStep(2);
+                });
+              }}
+              onBack={() => {
+                startTransition(() => {
+                  setStep(0);
+                });
+              }}
+            />
+          )}
+          {step >= 2 && step <= 5 && (
+            <SectionScreen
+              sectionIndex={step - 2}
+              answers={answers}
+              onAnswer={handleAnswer}
+              onNext={() => {
+                startTransition(() => {
+                  setStep(step + 1);
+                });
+              }}
+              onBack={() => {
+                startTransition(() => {
+                  setStep(step - 1);
+                });
+              }}
+            />
+          )}
+          {step === 6 && (
+            <ReviewScreen
+              answers={answers}
+              onSubmit={() => {
+                startTransition(() => {
+                  setStep(7);
+                });
+              }}
+              onBack={() => {
+                startTransition(() => {
+                  setStep(5);
+                });
+              }}
+              onGoToSection={goToSection}
+            />
+          )}
+          {step === 7 && (
+            <ResultsScreen
+              answers={answers}
+              details={details}
+              onRestart={handleRestart}
+            />
+          )}
+        </Suspense>
       </main>
 
       <footer className="border-t border-border py-6 mt-8">
