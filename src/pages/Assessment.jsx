@@ -85,7 +85,7 @@ export default function Assessment() {
               <img
                 src={enableGLogo}
                 alt="Enable G Logo"
-                className="h-11 sm:h-14 w-auto object-contain"
+                className="h-16 w-auto object-contain"
               />
             </div>
             <Suspense fallback={<ScreenLoader />}>
